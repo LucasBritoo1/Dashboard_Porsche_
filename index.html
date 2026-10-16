@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Porsche Sales Intelligence</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        appBg: '#0A0A0A',
+                        cardBg: '#171717',
+                        cardBorder: '#27272a',
+                        porsche: {
+                            red: '#D00000',
+                            darkRed: '#8B0012',
+                            gold: '#C5A059',
+                            lightGrey: '#a1a1aa',
+                            midGrey: '#52525b',
+                            darkGrey: '#27272a'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #0A0A0A;
+            color: #ffffff;
+            -webkit-font-smoothing: antialiased;
+        }
+        
+        /* Custom Select Arrow */
+        .custom-select {
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%3e9ca3af' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 1rem center;
+            background-size: 1em;
+        }
+
+        /* Subtle Inner shadow for cards */
+        .glass-card {
+            background: #171717;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 1.25rem;
+            transition: border-color 0.3s ease;
+        }
+        
+        .glass-card:hover {
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        /* Hero Banner Custom Shadow */
+        .hero-shadow {
+            box-shadow: inset 0 -80px 120px -20px #0A0A0A, 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        /* Status Badges */
+        .badge-delivered { background-color: rgba(255,255,255,0.1); color: #e4e4e7; }
+        .badge-pending { background-color: rgba(82, 82, 91, 0.3); color: #a1a1aa; border: 1px solid rgba(255,255,255,0.1); }
+        .badge-awaiting { background-color: rgba(197, 160, 89, 0.15); color: #C5A059; }
+        .badge-transit { background-color: rgba(59, 130, 246, 0.15); color: #93c5fd; }
+        .badge-cancelled { background-color: rgba(208, 0, 0, 0.15); color: #fca5a5; }
+
+        /* Custom Scrollbar for tables */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0A0A0A; }
+        ::-webkit-scrollbar-thumb { background: #27272a; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #52525b; }
+    </style>
+</head>
+<body class="min-h-screen font-sans p-4 md:p-6 lg:p-8">
+
+    <div class="max-w-[1500px] mx-auto flex flex-col gap-6">
+
+        <!-- 1. HERO BANNER -->
+        <section class="relative w-full h-[340px] rounded-[32px] overflow-hidden mb-2 hero-shadow border border-white/5 group">
+            <!-- Background Image (Porsche in snow) -->
+            <img src="porsche_img.jpg" 
+                 alt="Porsche em uma paisagem desértica" 
+                 class="absolute inset-0 w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-1000 ease-in-out" />
+            
+            <!-- Dark Gradients -->
+            <div class="absolute inset-0 bg-gradient-to-r from-black/95 via-black/75 to-transparent"></div>
+            <div class="absolute inset-0 bg-gradient-to-t from-[#0A0A0A] via-transparent to-transparent"></div>
+
+            <!-- Content -->
+            <div class="relative z-10 p-8 md:p-14 flex flex-col justify-center h-full">
+                <!-- Tag -->
+                <div class="flex items-center gap-3 mb-5">
+                    <div class="w-6 h-6 bg-gradient-to-br from-porsche-gold to-yellow-800 rounded-tl-lg rounded-br-lg shadow-[0_0_10px_rgba(197,160,89,0.3)]"></div>
+                    <span class="text-[11px] md:text-xs uppercase tracking-[0.25em] font-bold text-zinc-300">
+                        Porsche Sales Intelligence
+                    </span>
+                </div>
+                
+                <!-- Headline -->
+                <h1 class="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4 max-w-2xl leading-[1.1] tracking-tight uppercase">
+                    PERFORMANCE COMERCIAL COM PRECISÃO ESPORTIVA.
+                </h1>
+                
+                <!-- Subtitle -->
+                <p class="text-zinc-400 text-sm md:text-base max-w-xl font-light leading-relaxed">
+                    Dashboard executivo para responder quais modelos lideram por cidade, qual ano de modelo mais saiu e quais oportunidades aparecem no mix local de vendas.
+                </p>
+            </div>
+
+            <!-- Red Line -->
+            <div class="absolute bottom-0 left-14 w-[30%] h-1.5 bg-porsche-red shadow-[0_0_15px_#D00000]"></div>
+        </section>
+
+        <!-- 2. FILTERS -->
+        <section class="flex flex-col gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="glass-card p-4 px-5">
+                    <label class="block text-[10px] text-zinc-500 uppercase tracking-widest font-semibold mb-2">Modelo da Porsche</label>
+                    <select class="custom-select w-full bg-transparent text-white text-sm outline-none cursor-pointer">
+                        <option value="all" class="bg-cardBg">Todos</option>
+                    </select>
+                </div>
+                <div class="glass-card p-4 px-5">
+                    <label class="block text-[10px] text-zinc-500 uppercase tracking-widest font-semibold mb-2">Model Year</label>
+                    <select class="custom-select w-full bg-transparent text-white text-sm outline-none cursor-pointer">
+                        <option value="all" class="bg-cardBg">Todos</option>
+                    </select>
+                </div>
+                <div class="glass-card p-4 px-5">
+                    <label class="block text-[10px] text-zinc-500 uppercase tracking-widest font-semibold mb-2">City</label>
+                    <select class="custom-select w-full bg-transparent text-white text-sm outline-none cursor-pointer">
+                        <option value="all" class="bg-cardBg">Todos</option>
+                    </select>
+                </div>
+                <div class="glass-card p-4 px-5">
+                    <label class="block text-[10px] text-zinc-500 uppercase tracking-widest font-semibold mb-2">Pay Method</label>
+                    <select class="custom-select w-full bg-transparent text-white text-sm outline-none cursor-pointer">
+                        <option value="all" class="bg-cardBg">Todos</option>
+                    </select>
+                </div>
+            </div>
+
+            <button class="w-full bg-[#D00000] hover:bg-red-700 transition-colors text-white font-bold text-sm py-4 rounded-xl shadow-[0_4px_14px_rgba(208,0,0,0.2)] tracking-wide">
+                Limpar filtros
+            </button>
+        </section>
+
+        <!-- 3. KPIs -->
+        <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-2">
+            <div class="glass-card p-6">
+                <h3 class="text-[10px] text-zinc-500 uppercase font-bold tracking-widest mb-3">Vendas Filtradas</h3>
+                <div class="text-4xl font-bold text-white mb-2">100</div>
+                <p class="text-xs text-zinc-500">79 cidade(s) no recorte</p>
+            </div>
+            <div class="glass-card p-6">
+                <h3 class="text-[10px] text-zinc-500 uppercase font-bold tracking-widest mb-3">Receita Total</h3>
+                <div class="text-4xl font-bold text-white mb-2">$12,827,801</div>
+                <p class="text-xs text-zinc-500">Ticket médio $128,278</p>
+            </div>
+            <div class="glass-card p-6">
+                <h3 class="text-[10px] text-zinc-500 uppercase font-bold tracking-widest mb-3">Modelo Líder</h3>
+                <div class="text-3xl font-bold text-white mb-2 truncate pt-1">Cayenne Coupe</div>
+                <p class="text-xs text-zinc-500">4 venda(s), 4%</p>
+            </div>
+            <div class="glass-card p-6">
+                <h3 class="text-[10px] text-zinc-500 uppercase font-bold tracking-widest mb-3">Ano Dominante</h3>
+                <div class="text-4xl font-bold text-white mb-2">2024</div>
+                <p class="text-xs text-zinc-500">29 venda(s), 29%</p>
+            </div>
+        </section>
+
+        <!-- 4. CHARTS -->
+        <section class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <!-- Left Chart -->
+            <div class="glass-card p-8 flex flex-col h-[420px]">
+                <div class="flex justify-between items-start mb-6">
+                    <div>
+                        <h4 class="text-porsche-red text-[10px] font-bold uppercase tracking-widest mb-2">Pergunta 1</h4>
+                        <h2 class="text-xl font-bold text-white leading-tight">Principais modelos<br>vendidos por cidade</h2>
+                    </div>
+                    <p class="text-zinc-500 text-xs max-w-[200px] text-right leading-relaxed">
+                        Filtre uma cidade para revelar o mix local; mantenha geral para ver a liderança do portfólio.
+                    </p>
+                </div>
+                <div class="flex-grow relative w-full">
+                    <canvas id="barChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Right Chart -->
+            <div class="glass-card p-8 flex flex-col h-[420px]">
+                <div class="flex justify-between items-start mb-6">
+                    <div>
+                        <h4 class="text-porsche-red text-[10px] font-bold uppercase tracking-widest mb-2">Pergunta 2</h4>
+                        <h2 class="text-xl font-bold text-white leading-tight">Ano de modelo com<br>maior saída</h2>
+                    </div>
+                    <p class="text-zinc-500 text-xs max-w-[200px] text-right leading-relaxed">
+                        Distribuição de vendas por Model Year no recorte selecionado.
+                    </p>
+                </div>
+                <div class="flex-grow relative w-full flex items-center justify-center">
+                    <canvas id="doughnutChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- 5. INSIGHTS -->
+        <section class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            
+            <!-- Left: Table Insights -->
+            <div class="glass-card p-8 flex flex-col">
+                <div class="flex justify-between items-start mb-8">
+                    <div>
+                        <h4 class="text-porsche-red text-[10px] font-bold uppercase tracking-widest mb-2">Pergunta 3</h4>
+                        <h2 class="text-xl font-bold text-white">Insights por cidade</h2>
+                    </div>
+                    <p class="text-zinc-500 text-xs max-w-[200px] text-right">Ranking de cidades, modelo líder, método de pagamento e receita.</p>
+                </div>
+
+                <div class="w-full overflow-x-auto">
+                    <div class="min-w-[600px]">
+                        <!-- Table Header -->
+                        <div class="grid grid-cols-6 gap-4 text-[10px] font-bold text-zinc-600 uppercase tracking-widest border-b border-white/5 pb-4 mb-4">
+                            <div class="col-span-1">Cidade</div>
+                            <div class="col-span-1">Vendas</div>
+                            <div class="col-span-1">Modelo Líder</div>
+                            <div class="col-span-1">Pay Method</div>
+                            <div class="col-span-1">Receita</div>
+                            <div class="col-span-1">Força</div>
+                        </div>
+
+                        <!-- Rows -->
+                        <div class="space-y-1">
+                            <!-- Row 1 -->
+                            <div class="grid grid-cols-6 gap-4 items-center py-3 border-b border-white/5 text-sm hover:bg-white/[0.02] transition-colors">
+                                <div class="col-span-1 font-bold text-white">Atlanta</div>
+                                <div class="col-span-1 font-medium text-white">3</div>
+                                <div class="col-span-1 flex items-center gap-2">
+                                    <span class="text-white text-xs">911 Carrera Cabriolet</span>
+                                    <span class="bg-zinc-800 text-zinc-400 text-[10px] w-4 h-4 rounded-full flex items-center justify-center">1</span>
+                                </div>
+                                <div class="col-span-1 flex items-center gap-2">
+                                    <span class="text-white text-xs">Crypto Payment</span>
+                                    <span class="bg-zinc-800 text-zinc-400 text-[10px] w-4 h-4 rounded-full flex items-center justify-center">2</span>
+                                </div>
+                                <div class="col-span-1 font-medium text-white">$434,800</div>
+                                <div class="col-span-1 flex items-center"><div class="w-full bg-zinc-800 h-1 rounded-full"><div class="bg-porsche-red h-full w-[80%]"></div></div></div>
+                            </div>
+                            
+                            <!-- Row 2 -->
+                            <div class="grid grid-cols-6 gap-4 items-center py-3 border-b border-white/5 text-sm hover:bg-white/[0.02] transition-colors">
+                                <div class="col-span-1 font-bold text-white">Las Vegas</div>
+                                <div class="col-span-1 font-medium text-white">2</div>
+                                <div class="col-span-1 flex items-center gap-2">
+                                    <span class="text-white text-xs">911 GT3</span>
+                                    <span class="bg-zinc-800 text-zinc-400 text-[10px] w-4 h-4 rounded-full flex items-center justify-center">2</span>
+                                </div>
+                                <div class="col-span-1 flex items-center gap-2">
+                                    <span class="text-white text-xs">Wire Transfer</span>
+                                    <span class="bg-zinc-800 text-zinc-400 text-[10px] w-4 h-4 rounded-full flex items-center justify-center">2</span>
+                                </div>
+                                <div class="col-span-1 font-medium text-white">$473,500</div>
+                                <div class="col-span-1 flex items-center"><div class="w-full bg-zinc-800 h-1 rounded-full"><div class="bg-porsche-red h-full w-[60%]"></div></div></div>
+                            </div>
+
+                            <!-- Row 3 -->
+                            <div class="grid grid-cols-6 gap-4 items-center py-3 border-b border-white/5 text-sm hover:bg-white/[0.02] transition-colors">
+                                <div class="col-span-1 font-bold text-white">San Diego</div>
+                                <div class="col-span-1 font-medium text-white">2</div>
+                                <div class="col-span-1 flex items-center gap-2">
+                                    <span class="text-white text-xs">Cayenne E-Hybrid</span>
+                                    <span class="bg-zinc-800 text-zinc-400 text-[10px] w-4 h-4 rounded-full flex items-center justify-center">1</span>
+                                </div>
+                                <div class="col-span-1 flex items-center gap-2">
+                                    <span class="text-white text-xs">Crypto Payment</span>
+                                    <span class="bg-zinc-800 text-zinc-400 text-[10px] w-4 h-4 rounded-full flex items-center justify-center">1</span>
+                                </div>
+                                <div class="col-span-1 font-medium text-white">$303,750</div>
+                                <div class="col-span-1 flex items-center"><div class="w-full bg-zinc-800 h-1 rounded-full"><div class="bg-porsche-red h-full w-[40%]"></div></div></div>
+                            </div>
+
+                            <!-- Row 4 -->
+                            <div class="grid grid-cols-6 gap-4 items-center py-3 border-b border-white/5 text-sm hover:bg-white/[0.02] transition-colors bg-white/[0.03] rounded-lg -mx-2 px-2">
+                                <div class="col-span-1 font-bold text-white">Oakland</div>
+                                <div class="col-span-1 font-medium text-white">2</div>
+                                <div class="col-span-1 flex items-center gap-2">
+                                    <span class="text-white text-xs">911 Targa 4</span>
+                                    <span class="bg-zinc-800 text-zinc-400 text-[10px] w-4 h-4 rounded-full flex items-center justify-center">2</span>
+                                </div>
+                                <div class="col-span-1 flex items-center gap-2">
+                                    <span class="text-white text-xs">Financing</span>
+                                    <span class="bg-zinc-800 text-zinc-400 text-[10px] w-4 h-4 rounded-full flex items-center justify-center">2</span>
+                                </div>
+                                <div class="col-span-1 font-medium text-white">$284,500</div>
+                                <div class="col-span-1 flex items-center"><div class="w-full bg-zinc-800 h-1 rounded-full"><div class="bg-porsche-red h-full w-[35%]"></div></div></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Recommendations -->
+            <div class="glass-card p-8 flex flex-col">
+                <div class="mb-8">
+                    <h4 class="text-porsche-red text-[10px] font-bold uppercase tracking-widest mb-2">Recomendações</h4>
+                    <h2 class="text-xl font-bold text-white">Leitura executiva</h2>
+                </div>
+
+                <div class="flex flex-col gap-3">
+                    <!-- Rec 1 -->
+                    <div class="bg-[#1c1c1f] border border-white/5 rounded-xl p-5 flex gap-4 hover:border-white/10 transition-colors">
+                        <div class="mt-1.5"><div class="w-2 h-2 rounded-full bg-porsche-red"></div></div>
+                        <div>
+                            <h4 class="text-white font-bold text-sm mb-1.5">Modelo com maior tração</h4>
+                            <p class="text-zinc-400 text-xs leading-relaxed">Cayenne Coupe lidera com 4 venda(s). Priorize exposição, test-drives e campanhas para variantes próximas.</p>
+                        </div>
+                    </div>
+
+                    <!-- Rec 2 -->
+                    <div class="bg-[#1c1c1f] border border-white/5 rounded-xl p-5 flex gap-4 hover:border-white/10 transition-colors">
+                        <div class="mt-1.5"><div class="w-2 h-2 rounded-full bg-porsche-red"></div></div>
+                        <div>
+                            <h4 class="text-white font-bold text-sm mb-1.5">Cidade com maior concentração</h4>
+                            <p class="text-zinc-400 text-xs leading-relaxed">Atlanta reúne 3 venda(s). Use o mix vencedor como benchmark regional.</p>
+                        </div>
+                    </div>
+
+                    <!-- Rec 3 -->
+                    <div class="bg-[#1c1c1f] border border-white/5 rounded-xl p-5 flex gap-4 hover:border-white/10 transition-colors">
+                        <div class="mt-1.5"><div class="w-2 h-2 rounded-full bg-porsche-red"></div></div>
+                        <div>
+                            <h4 class="text-white font-bold text-sm mb-1.5">Preferência de pagamento</h4>
+                            <p class="text-zinc-400 text-xs leading-relaxed">Wire Transfer domina com 26 venda(s). Ajuste checkout e ofertas para esse fluxo.</p>
+                        </div>
+                    </div>
+
+                    <!-- Rec 4 -->
+                    <div class="bg-[#1c1c1f] border border-white/5 rounded-xl p-5 flex gap-4 hover:border-white/10 transition-colors">
+                        <div class="mt-1.5"><div class="w-2 h-2 rounded-full bg-porsche-red"></div></div>
+                        <div>
+                            <h4 class="text-white font-bold text-sm mb-1.5">Ano em evidência</h4>
+                            <p class="text-zinc-400 text-xs leading-relaxed">Model Year 2024 concentra 29 venda(s). Ticket médio: $128,278.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- 6. DETALHAMENTO (Latest Sales Table) -->
+        <section class="glass-card p-8 mt-2 mb-10">
+            <div class="flex justify-between items-start mb-8">
+                <div>
+                    <h4 class="text-porsche-red text-[10px] font-bold uppercase tracking-widest mb-2">Detalhamento</h4>
+                    <h2 class="text-xl font-bold text-white">Últimas vendas no recorte</h2>
+                </div>
+                <p class="text-zinc-500 text-xs max-w-[200px] text-right">Tabela operacional para validar preço, status e método de pagamento.</p>
+            </div>
+
+            <div class="w-full overflow-x-auto">
+                <div class="min-w-[900px]">
+                    <!-- Table Header -->
+                    <div class="grid grid-cols-7 gap-4 text-[10px] font-bold text-zinc-600 uppercase tracking-widest border-b border-white/5 pb-4 mb-2">
+                        <div class="col-span-1">Data</div>
+                        <div class="col-span-1">Modelo</div>
+                        <div class="col-span-1">Ano</div>
+                        <div class="col-span-1">Cidade</div>
+                        <div class="col-span-1">Pagamento</div>
+                        <div class="col-span-1">Preço</div>
+                        <div class="col-span-1 pl-2">Status</div>
+                    </div>
+
+                    <!-- Rows -->
+                    <div class="flex flex-col text-sm text-zinc-300">
+                        
+                        <div class="grid grid-cols-7 gap-4 items-center py-4 border-b border-white/5 hover:bg-white/[0.02] transition-colors">
+                            <div class="col-span-1 font-medium">2027-10-01</div>
+                            <div class="col-span-1 text-white font-semibold">911 Dakar</div>
+                            <div class="col-span-1">2024</div>
+                            <div class="col-span-1">New Orleans, LA</div>
+                            <div class="col-span-1">Lease</div>
+                            <div class="col-span-1 text-white font-medium">$271,700</div>
+                            <div class="col-span-1"><span class="badge-delivered px-3 py-1 rounded-full text-[11px] font-medium tracking-wide">Delivered</span></div>
+                        </div>
+
+                        <div class="grid grid-cols-7 gap-4 items-center py-4 border-b border-white/5 hover:bg-white/[0.02] transition-colors">
+                            <div class="col-span-1 font-medium">2027-09-19</div>
+                            <div class="col-span-1 text-white font-semibold">Panamera Turbo</div>
+                            <div class="col-span-1">2020</div>
+                            <div class="col-span-1">Tulsa, OK</div>
+                            <div class="col-span-1">Wire Transfer</div>
+                            <div class="col-span-1 text-white font-medium">$137,500</div>
+                            <div class="col-span-1"><span class="badge-delivered px-3 py-1 rounded-full text-[11px] font-medium tracking-wide">Delivered</span></div>
+                        </div>
+
+                        <div class="grid grid-cols-7 gap-4 items-center py-4 border-b border-white/5 hover:bg-white/[0.02] transition-colors">
+                            <div class="col-span-1 font-medium">2027-08-08</div>
+                            <div class="col-span-1 text-white font-semibold">718 Boxster</div>
+                            <div class="col-span-1">2021</div>
+                            <div class="col-span-1">Long Beach, CA</div>
+                            <div class="col-span-1">Bank Transfer</div>
+                            <div class="col-span-1 text-white font-medium">$71,900</div>
+                            <div class="col-span-1"><span class="badge-pending px-3 py-1 rounded-full text-[11px] font-medium tracking-wide">Pending</span></div>
+                        </div>
+
+                        <div class="grid grid-cols-7 gap-4 items-center py-4 border-b border-white/5 hover:bg-white/[0.02] transition-colors">
+                            <div class="col-span-1 font-medium">2027-07-22</div>
+                            <div class="col-span-1 text-white font-semibold">Taycan GTS</div>
+                            <div class="col-span-1">2025</div>
+                            <div class="col-span-1">Atlanta, GA</div>
+                            <div class="col-span-1">Crypto Payment</div>
+                            <div class="col-span-1 text-white font-medium">$148,500</div>
+                            <div class="col-span-1"><span class="badge-delivered px-3 py-1 rounded-full text-[11px] font-medium tracking-wide">Delivered</span></div>
+                        </div>
+
+                        <div class="grid grid-cols-7 gap-4 items-center py-4 border-b border-white/5 hover:bg-white/[0.02] transition-colors">
+                            <div class="col-span-1 font-medium">2027-07-03</div>
+                            <div class="col-span-1 text-white font-semibold">Macan T</div>
+                            <div class="col-span-1">2022</div>
+                            <div class="col-span-1">Mesa, AZ</div>
+                            <div class="col-span-1">Cash</div>
+                            <div class="col-span-1 text-white font-medium">$74,400</div>
+                            <div class="col-span-1"><span class="badge-awaiting px-3 py-1 rounded-full text-[11px] font-medium tracking-wide">Awaiting Pickup</span></div>
+                        </div>
+
+                        <div class="grid grid-cols-7 gap-4 items-center py-4 border-b border-white/5 hover:bg-white/[0.02] transition-colors">
+                            <div class="col-span-1 font-medium">2027-06-18</div>
+                            <div class="col-span-1 text-white font-semibold">Cayenne E-Hybrid</div>
+                            <div class="col-span-1">2023</div>
+                            <div class="col-span-1">Charlotte, NC</div>
+                            <div class="col-span-1">Lease</div>
+                            <div class="col-span-1 text-white font-medium">$96,800</div>
+                            <div class="col-span-1"><span class="badge-delivered px-3 py-1 rounded-full text-[11px] font-medium tracking-wide">Delivered</span></div>
+                        </div>
+
+                        <div class="grid grid-cols-7 gap-4 items-center py-4 border-b border-white/5 hover:bg-white/[0.02] transition-colors bg-white/[0.03] rounded-lg -mx-2 px-2">
+                            <div class="col-span-1 font-medium text-white">2027-05-12</div>
+                            <div class="col-span-1 text-white font-semibold">Taycan Turbo</div>
+                            <div class="col-span-1 text-white">2025</div>
+                            <div class="col-span-1 text-white">Dallas, TX</div>
+                            <div class="col-span-1 text-white">ACH Payment</div>
+                            <div class="col-span-1 text-white font-medium">$164,000</div>
+                            <div class="col-span-1"><span class="badge-transit px-3 py-1 rounded-full text-[11px] font-bold tracking-wide">In Transit</span></div>
+                        </div>
+
+                        <div class="grid grid-cols-7 gap-4 items-center py-4 border-b border-white/5 hover:bg-white/[0.02] transition-colors">
+                            <div class="col-span-1 font-medium">2027-04-02</div>
+                            <div class="col-span-1 text-white font-semibold">911 Turbo S</div>
+                            <div class="col-span-1">2026</div>
+                            <div class="col-span-1">Boston, MA</div>
+                            <div class="col-span-1">Wire Transfer</div>
+                            <div class="col-span-1 text-white font-medium">$249,300</div>
+                            <div class="col-span-1"><span class="badge-awaiting px-3 py-1 rounded-full text-[11px] font-medium tracking-wide">Awaiting Delivery</span></div>
+                        </div>
+
+                        <div class="grid grid-cols-7 gap-4 items-center py-4 hover:bg-white/[0.02] transition-colors">
+                            <div class="col-span-1 font-medium">2027-03-18</div>
+                            <div class="col-span-1 text-white font-semibold">718 Cayman</div>
+                            <div class="col-span-1">2023</div>
+                            <div class="col-span-1">Seattle, WA</div>
+                            <div class="col-span-1">Debit Card</div>
+                            <div class="col-span-1 text-white font-medium">$78,900</div>
+                            <div class="col-span-1"><span class="badge-cancelled px-3 py-1 rounded-full text-[11px] font-medium tracking-wide">Cancelled</span></div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </div>
+
+    <script>
+        // Chart.js Global Config
+        Chart.defaults.color = '#a1a1aa';
+        Chart.defaults.font.family = 'Inter';
+        Chart.defaults.plugins.tooltip.backgroundColor = '#171717';
+        Chart.defaults.plugins.tooltip.titleColor = '#ffffff';
+        Chart.defaults.plugins.tooltip.borderColor = '#27272a';
+        Chart.defaults.plugins.tooltip.borderWidth = 1;
+        Chart.defaults.plugins.tooltip.padding = 12;
+        Chart.defaults.plugins.tooltip.cornerRadius = 8;
+
+        // 1. Bar Chart (Models)
+        const ctxBar = document.getElementById('barChart').getContext('2d');
+        const barColors = [
+            '#D00000', // Cayenne Coupe (Red)
+            '#FFFFFF', // Cayenne E-Hybrid (White)
+            '#C5A059', // Macan Electric (Gold)
+            '#71717A', // Macan T (Grey)
+            '#3F3F46', // Panamera (Dark Grey)
+            '#27272A', // Taycan 4S (Darker Grey)
+            '#8B0012', // 718 Boxster (Dark Red)
+            '#D4D4D8'  // 718 Cayman (Light Grey)
+        ];
+
+        new Chart(ctxBar, {
+            type: 'bar',
+            data: {
+                labels: ['Cayenne Coupe', 'Cayenne E-Hybrid', 'Macan Electric', 'Macan T', 'Panamera', 'Taycan 4S', '718 Boxster', '718 Cayman'],
+                datasets: [{
+                    data: [4, 4, 4, 3.5, 3.5, 3.5, 3, 3],
+                    backgroundColor: barColors,
+                    borderWidth: 0,
+                    borderRadius: 0,
+                    barThickness: 18
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: {
+                        grid: { display: false, drawBorder: false },
+                        ticks: { display: true, color: '#52525b', font: { size: 10 }, stepSize: 1 },
+                        border: { display: false }
+                    },
+                    y: {
+                        grid: { display: false, drawBorder: false },
+                        ticks: { color: '#e4e4e7', font: { size: 11, weight: '500' }, padding: 10 },
+                        border: { display: false }
+                    }
+                }
+            }
+        });
+
+        // 2. Doughnut Chart (Model Year)
+        const ctxDoughnut = document.getElementById('doughnutChart').getContext('2d');
+        new Chart(ctxDoughnut, {
+            type: 'doughnut',
+            data: {
+                labels: ['2024', '2023', '2022', '2025', '2021', '2020', '2026'],
+                datasets: [{
+                    data: [35, 20, 15, 10, 8, 7, 5],
+                    backgroundColor: [
+                        '#D00000', // 2024
+                        '#FFFFFF', // 2023
+                        '#C5A059', // 2022
+                        '#a1a1aa', // 2025
+                        '#52525b', // 2021
+                        '#27272a', // 2020
+                        '#8B0012'  // 2026
+                    ],
+                    borderWidth: 0,
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '70%',
+                layout: { padding: { bottom: 20 } },
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            usePointStyle: true,
+                            pointStyle: 'circle',
+                            padding: 20,
+                            color: '#a1a1aa',
+                            font: { size: 11, weight: '600' }
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
